@@ -1,1 +1,1 @@
-# TTL / Telegram To LINE
+# CPIM - TnL / Cross Platform Instant Messaging - Telegram and LINE
