@@ -119,7 +119,7 @@ void handleTelegram(http_request request)
     request.reply(status_codes::OK, "");
 
     http_response response = sendToLine(strBody);
-    coutHttpResponse(response, "sendToTelegram");
+    coutHttpResponse(response, "sendToLine");
 }
 
 void handleLine(http_request request)
