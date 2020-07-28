@@ -168,7 +168,7 @@ http_response sendToLine(std::string strText)
 
     std::ostringstream strBody;
     strBody << "message=" << strText;
-    msg.set_body(strBody.str());
+    msg.set_body(strBody.str(), "application/x-www-form-urlencoded; charset=utf-8");
 
     http_response response = LineClient.request(msg).get();
 
