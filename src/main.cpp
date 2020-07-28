@@ -66,8 +66,20 @@ int main(int argc, char *argv[])
     }
     */
 
-    http_listener listenTelegram = openListener(listen_to_telegram_address);
-    http_listener listenLine = openListener(listen_to_line_address);
+    http_client_config LineClientConfig;
+    LineClientConfig.set_validate_certificates(false);
+    LineClient = http_client(LineNotifyApiUrlBase, LineClientConfig);
+
+    http_listener listenTelegram = openListener(listen_to_telegram_address, handleTelegram);
+
+    std::ostringstream TelegramBotApiUrlBaseStream;
+    TelegramBotApiUrlBaseStream << TelegramBotApiUrlBase << TelegramBotApiToken;
+
+    http_client_config TelegramClientConfig;
+    TelegramClientConfig.set_validate_certificates(false);
+    TelegramClient = http_client(TelegramBotApiUrlBaseStream.str(), TelegramClientConfig);
+
+    http_listener listenLine     = openListener(listen_to_line_address    , handleLine);
 
     while(true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
@@ -80,7 +92,7 @@ int main(int argc, char *argv[])
     return ExitCode::Normal;
 }
 
-http_listener openListener(std::string address)
+http_listener openListener(std::string address, const std::function<void(http_request)>& handler)
 {
     uri m_uri(U(address));
     http_listener listener(m_uri);
@@ -93,31 +105,56 @@ http_listener openListener(std::string address)
     return listener;
 }
 
-void handler(http_request request)
+void handleTelegram(http_request request)
 {
-    std::ostringstream textStream;
+    json::value jsonBody = request.extract_json().get();
+    std::string strBody = jsonBody.serialize();
 
-    textStream << U("Receive (") << request.method() << U("): ");
-    textStream << request.request_uri().to_string() << std::endl;
-    textStream << U("extract_json: ") << request.extract_json().get().serialize();
-
-    std::cout << std::endl << textStream.str() << std::endl;
+    std::ostringstream outputString;
+    outputString << U("Receive (") << request.method() << U("): ");
+    outputString << request.request_uri().to_string() << std::endl;
+    outputString << U("Body: ") << strBody;
+    std::cout << std::endl << outputString.str() << std::endl;
 
     request.reply(status_codes::OK, "");
+
+    sendToLine(strBody);
 }
 
-void modeToday(http_client client, bool disable_notification)
+void handleLine(http_request request)
 {
-    std::cout << U("[modeToday] disable_notification = ") << disable_notification << std::endl;
+    json::value jsonBody = request.extract_json().get();
+    std::string strBody = jsonBody.serialize();
 
-    typedef local_adjustor<ptime, +8, no_dst> timezoneTaipei;
-    ptime now_ptime_utc = posix_time::second_clock::universal_time();
-    ptime now_ptime_taipei = timezoneTaipei::utc_to_local(now_ptime_utc);
+    std::ostringstream outputString;
+    outputString << U("Receive (") << request.method() << U("): ");
+    outputString << request.request_uri().to_string() << std::endl;
+    outputString << U("Body: ") << strBody;
+    std::cout << std::endl << outputString.str() << std::endl;
 
-    uint year = now_ptime_taipei.date().year();
-    uint day = now_ptime_taipei.date().day_of_year();
+    request.reply(status_codes::OK, "");
 
-    modeYearDay(client, year, day, disable_notification);
+    http_response response = sendToTelegram(strBody);
+    coutHttpResponse(response, "sendToTelegram");
+}
+
+http_response sendToLine(std::string strText)
+{
+
+}
+
+http_response sendToTelegram(std::string strText)
+{
+    std::string methodName = U("sendMessage");
+
+    json::value requestBody = json::value::object();
+    requestBody[U("chat_id")] = json::value::string(default_telegram_target);
+    requestBody[U("text")] = json::value::string(strText);
+
+    uri_builder builder(methodName);
+    http_response response = TelegramClient.request(methods::POST, builder.to_string(), requestBody).get();
+
+    return response;
 }
 
 void modeYearDay(http_client client, uint year, uint day, bool disable_notification)
@@ -236,9 +273,9 @@ void coutArgs(int argc, char *argv[])
     std::cout << std::endl;
 }
 
-void coutHttpResponse(http_response response)
+void coutHttpResponse(http_response response, std::string strPrefix)
 {
-    std::cout << U("Response (") << response.status_code() << U("): ")
+    std::cout << strPrefix << U("(") << response.status_code() << U("): ")
         << response.extract_json().get().serialize() << std::endl;
 }
 

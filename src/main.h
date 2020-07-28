@@ -22,8 +22,18 @@ using namespace boost;
 using namespace boost::date_time;
 using namespace boost::posix_time;
 
-http_listener openListener(std::string address);
-void handler(http_request request);
+http_listener openListener(std::string address, const std::function<void(http_request)>& handler);
+void handleTelegram(http_request request);
+void handleLine(http_request request);
+
+std::string TelegramBotApiUrlBase = U("https://api.telegram.org/bot");
+std::string LineNotifyApiUrlBase = U("https://notify-api.line.me/api");
+
+http_client TelegramClient = http_client(web::uri());
+http_client LineClient = http_client(web::uri());
+
+http_response sendToLine(std::string strText);
+http_response sendToTelegram(std::string strText);
 
 enum ArgIndex : uint
 {
@@ -57,7 +67,7 @@ uint getMonth(uint year, uint day);
 uint getDate(uint year, uint day);
 
 void coutArgs(int argc, char *argv[]);
-void coutHttpResponse(http_response response);
+void coutHttpResponse(http_response response, std::string strPrefix = "Response");
 
 http_response sendAudio(http_client client, bool isNewTestament, uint year, uint day, bool disable_notification);
 http_response sendPoll(http_client client, uint day, bool disable_notification);
