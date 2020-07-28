@@ -170,7 +170,7 @@ http_response sendToLine(std::string strText)
     strBody << "message=" << strText;
     msg.set_body(strBody.str());
 
-    http_response response = TelegramClient.request(msg).get();
+    http_response response = LineClient.request(msg).get();
 
     return response;
 }
