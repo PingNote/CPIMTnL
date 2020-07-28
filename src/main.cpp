@@ -275,8 +275,15 @@ void coutArgs(int argc, char *argv[])
 
 void coutHttpResponse(http_response response, std::string strPrefix)
 {
-    std::cout << strPrefix << U("(") << response.status_code() << U("): ")
-        << response.extract_json().get().serialize() << std::endl;
+    std::ostringstream outputString;
+    outputString << strPrefix << U("(") << response.status_code() << U(")");
+
+    if(response.status_code() != 200)
+    {
+        outputString << U(": ") << response.extract_json().get().serialize();
+    }
+
+    std::cout << outputString.str() << std::endl;
 }
 
 bool isLeapYear(uint year)
