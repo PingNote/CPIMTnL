@@ -97,10 +97,8 @@ void handler(http_request request)
 {
     std::ostringstream textStream;
 
-    textStream << U("method: ") << request.method() << std::endl;
-    textStream << U("path: ") << request.request_uri().path() << std::endl;
-    textStream << U("query: ") << request.request_uri().query() << std::endl;
-    textStream << U("request_uri: ") << request.request_uri().to_string() << std::endl;
+    textStream << U("[") << request.method() << U("] ");
+    textStream << request.request_uri().to_string() << std::endl;
     textStream << U("extract_string: ") << request.extract_string().get();
 
     std::cout << std::endl << textStream.str() << std::endl;
