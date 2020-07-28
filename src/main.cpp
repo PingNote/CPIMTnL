@@ -118,7 +118,8 @@ void handleTelegram(http_request request)
 
     request.reply(status_codes::OK, "");
 
-    sendToLine(strBody);
+    http_response response = sendToLine(strBody);
+    coutHttpResponse(response, "sendToTelegram");
 }
 
 void handleLine(http_request request)
@@ -154,7 +155,24 @@ http_response sendToTelegram(std::string strText)
 
 http_response sendToLine(std::string strText)
 {
+    std::string methodName = U("notify");
 
+    std::ostringstream outputString;
+    outputString << "Bearer " << default_line_Target;
+
+    http_request msg(methods::POST);
+    msg.headers()["Authorization"] = outputString.str();
+
+    uri_builder builder(methodName);
+    msg.set_request_uri(builder.to_string());
+
+    std::ostringstream strBody;
+    strBody << "message=" << strText;
+    msg.set_body(strBody.str());
+
+    http_response response = TelegramClient.request(msg).get();
+
+    return response;
 }
 
 void modeYearDay(http_client client, uint year, uint day, bool disable_notification)
