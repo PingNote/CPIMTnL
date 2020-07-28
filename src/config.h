@@ -1,5 +1,5 @@
-#ifndef BIBLE365TODAY_CONFIG_H
-#define BIBLE365TODAY_CONFIG_H
+#ifndef CPIMTnL_CONFIG_H
+#define CPIMTnL_CONFIG_H
 
 /// <summary>
 /// Authorizing your bot:
@@ -17,4 +17,15 @@ std::string chat_id;
 
 const std::string github_io_url = U("https://pingnote.github.io/bible365.today");
 
-#endif //BIBLE365TODAY_CONFIG_H
+const std::string listen_to_telegram_address;
+const std::string listen_to_line_address;
+
+const std::string certificate_filename;
+const boost::asio::ssl::context::file_format certificate_fileformat = boost::asio::ssl::context::file_format::pem;
+
+const std::string certificate_chain_filename;
+
+const std::string private_key_filename;
+const boost::asio::ssl::context::file_format private_key_fileformat = boost::asio::ssl::context::file_format::pem;
+
+#endif //CPIMTnL_CONFIG_H

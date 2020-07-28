@@ -4,6 +4,7 @@ int main(int argc, char *argv[])
 {
     coutArgs(argc, argv);
 
+    /*
     if (argc <= ArgIndex::Token)
     {
         std::cout << U("Token Not Found") << std::endl;
@@ -63,8 +64,59 @@ int main(int argc, char *argv[])
         }
             break;
     }
+    */
+
+    http_listener listenTelegram = openListener(listen_to_telegram_address);
+    http_listener listenLine = openListener(listen_to_line_address);
+
+    while(true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    }
+
+    std::cout << "Terminating JSON listener." << std::endl;
+    listenTelegram.close().wait();
+    listenLine.close().wait();
 
     return ExitCode::Normal;
+}
+
+http_listener openListener(std::string address)
+{
+    uri m_uri(U(address));
+
+    http_listener_config config;
+    config.set_ssl_context_callback(setSSL);
+
+    http_listener listener(m_uri);
+    listener.support(handler);
+    listener.open().wait();
+    std::cout << "Web server started on: " << listener.uri().to_string() << std::endl;
+
+    return listener;
+}
+
+void setSSL(boost::asio::ssl::context& ctx)
+{
+    ctx.set_options(boost::asio::ssl::context::default_workarounds);
+    ctx.use_certificate_file(certificate_filename, certificate_fileformat);
+    ctx.use_certificate_chain_file(certificate_chain_filename);
+    ctx.use_private_key_file(private_key_filename, private_key_fileformat);
+}
+
+void handler(http_request request)
+{
+    std::ostringstream textStream;
+    textStream << std::endl;
+    textStream << U("method: ") << request.method() << std::endl << std::endl;
+    textStream << U("host: ") << request.request_uri().host() << std::endl << std::endl;
+    textStream << U("port: ") << request.request_uri().port() << std::endl << std::endl;
+    textStream << U("path: ") << request.request_uri().path() << std::endl << std::endl;
+    textStream << U("query: ") << request.request_uri().query() << std::endl << std::endl;
+    textStream << U("request_uri: ") << request.request_uri().to_string() << std::endl << std::endl;
+    textStream << U("extract_string: ") << request.extract_string().get() << std::endl << std::endl;
+
+
+    request.reply(status_codes::OK, textStream.str(), "text/plain; charset=utf-8");
 }
 
 void modeToday(http_client client, bool disable_notification)
