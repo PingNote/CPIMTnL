@@ -138,11 +138,6 @@ void handleLine(http_request request)
     coutHttpResponse(response, "sendToTelegram");
 }
 
-http_response sendToLine(std::string strText)
-{
-
-}
-
 http_response sendToTelegram(std::string strText)
 {
     std::string methodName = U("sendMessage");
@@ -155,6 +150,11 @@ http_response sendToTelegram(std::string strText)
     http_response response = TelegramClient.request(methods::POST, builder.to_string(), requestBody).get();
 
     return response;
+}
+
+http_response sendToLine(std::string strText)
+{
+
 }
 
 void modeYearDay(http_client client, uint year, uint day, bool disable_notification)

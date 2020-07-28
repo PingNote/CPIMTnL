@@ -29,11 +29,11 @@ void handleLine(http_request request);
 std::string TelegramBotApiUrlBase = U("https://api.telegram.org/bot");
 std::string LineNotifyApiUrlBase = U("https://notify-api.line.me/api");
 
-http_client TelegramClient = http_client(web::uri());
-http_client LineClient = http_client(web::uri());
+http_client TelegramClient = http_client(TelegramBotApiUrlBase);
+http_client LineClient = http_client(LineNotifyApiUrlBase);
 
-http_response sendToLine(std::string strText);
 http_response sendToTelegram(std::string strText);
+http_response sendToLine(std::string strText);
 
 enum ArgIndex : uint
 {
