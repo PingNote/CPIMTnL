@@ -96,16 +96,16 @@ http_listener openListener(std::string address)
 void handler(http_request request)
 {
     std::ostringstream textStream;
-    textStream << std::endl;
-    textStream << U("method: ") << request.method() << std::endl << std::endl;
-    textStream << U("host: ") << request.request_uri().host() << std::endl << std::endl;
-    textStream << U("port: ") << request.request_uri().port() << std::endl << std::endl;
-    textStream << U("path: ") << request.request_uri().path() << std::endl << std::endl;
-    textStream << U("query: ") << request.request_uri().query() << std::endl << std::endl;
-    textStream << U("request_uri: ") << request.request_uri().to_string() << std::endl << std::endl;
-    textStream << U("extract_string: ") << request.extract_string().get() << std::endl << std::endl;
 
-    request.reply(status_codes::OK, textStream.str(), "text/plain; charset=utf-8");
+    textStream << U("method: ") << request.method() << std::endl;
+    textStream << U("path: ") << request.request_uri().path() << std::endl;
+    textStream << U("query: ") << request.request_uri().query() << std::endl;
+    textStream << U("request_uri: ") << request.request_uri().to_string() << std::endl;
+    textStream << U("extract_string: ") << request.extract_string().get();
+
+    std::cout << std::endl << textStream.str() << std::endl;
+
+    request.reply(status_codes::OK, "");
 }
 
 void modeToday(http_client client, bool disable_notification)
