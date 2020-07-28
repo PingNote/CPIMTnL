@@ -83,34 +83,14 @@ int main(int argc, char *argv[])
 http_listener openListener(std::string address)
 {
     uri m_uri(U(address));
+    http_listener listener(m_uri);
 
-    http_listener_config config;
-    config.set_ssl_context_callback(setSSL);
-
-    http_listener listener(m_uri, config);
     listener.support(handler);
     listener.open().wait();
+
     std::cout << "Web server started on: " << listener.uri().to_string() << std::endl;
 
     return listener;
-}
-
-void setSSL(boost::asio::ssl::context& ctx)
-{
-    std::cout << "setSSL" << std::endl;
-
-    ctx.set_options(boost::asio::ssl::context::default_workarounds);
-    ctx.set_password_callback(setPassword);
-    ctx.use_certificate_file(certificate_filename, certificate_fileformat);
-    ctx.use_private_key_file(private_key_filename, private_key_fileformat);
-    ctx.use_certificate_chain_file(certificate_chain_filename);
-}
-
-std::string setPassword(std::size_t size, boost::asio::ssl::context::password_purpose purpose)
-{
-    std::cout << "setPassword" << std::endl;
-
-    return "";
 }
 
 void handler(http_request request)
@@ -124,7 +104,6 @@ void handler(http_request request)
     textStream << U("query: ") << request.request_uri().query() << std::endl << std::endl;
     textStream << U("request_uri: ") << request.request_uri().to_string() << std::endl << std::endl;
     textStream << U("extract_string: ") << request.extract_string().get() << std::endl << std::endl;
-
 
     request.reply(status_codes::OK, textStream.str(), "text/plain; charset=utf-8");
 }

@@ -22,8 +22,6 @@ using namespace boost;
 using namespace boost::date_time;
 using namespace boost::posix_time;
 
-void setSSL(boost::asio::ssl::context& ctx);
-std::string setPassword(std::size_t size, boost::asio::ssl::context::password_purpose purpose);
 http_listener openListener(std::string address);
 void handler(http_request request);
 
