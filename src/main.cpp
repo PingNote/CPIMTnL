@@ -97,9 +97,9 @@ void handler(http_request request)
 {
     std::ostringstream textStream;
 
-    textStream << U("[") << request.method() << U("] ");
+    textStream << U("Receive (") << request.method() << U("): ");
     textStream << request.request_uri().to_string() << std::endl;
-    textStream << U("extract_string: ") << request.extract_string().get();
+    textStream << U("extract_json: ") << request.extract_json().get().serialize();
 
     std::cout << std::endl << textStream.str() << std::endl;
 
