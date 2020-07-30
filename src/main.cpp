@@ -113,8 +113,17 @@ void handleTelegram(http_request request)
     std::ostringstream outputString;
     outputString << U("Receive (") << request.method() << U("): ");
     outputString << request.request_uri().to_string() << std::endl;
-    outputString << U("Body: ") << strBody;
-    std::cout << std::endl << outputString.str() << std::endl;
+    outputString << U("Body: ") << strBody << std::endl;
+
+    if(request.headers().size() > 0)
+    {
+        for(auto header : request.headers())
+        {
+            outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
+        }
+    }
+
+    std::cout << outputString.str() << std::endl;
 
     request.reply(status_codes::OK, "");
 
@@ -130,8 +139,17 @@ void handleLine(http_request request)
     std::ostringstream outputString;
     outputString << U("Receive (") << request.method() << U("): ");
     outputString << request.request_uri().to_string() << std::endl;
-    outputString << U("Body: ") << strBody;
-    std::cout << std::endl << outputString.str() << std::endl;
+    outputString << U("Body: ") << strBody << std::endl;
+
+    if(request.headers().size() > 0)
+    {
+        for(auto header : request.headers())
+        {
+            outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
+        }
+    }
+
+    std::cout << outputString.str() << std::endl;
 
     request.reply(status_codes::OK, "");
 
@@ -147,8 +165,7 @@ http_response sendToTelegram(std::string strText)
     requestBody[U("chat_id")] = json::value::string(default_telegram_target);
     requestBody[U("text")] = json::value::string(strText);
 
-    uri_builder builder(methodName);
-    http_response response = TelegramClient.request(methods::POST, builder.to_string(), requestBody).get();
+    http_response response = TelegramClient.request(methods::POST, methodName, requestBody).get();
 
     return response;
 }
@@ -163,12 +180,11 @@ http_response sendToLine(std::string strText)
     http_request msg(methods::POST);
     msg.headers()["Authorization"] = outputString.str();
 
-    uri_builder builder(methodName);
-    msg.set_request_uri(builder.to_string());
+    msg.set_request_uri(methodName);
 
-    std::ostringstream strBody;
-    strBody << "message=" << strText;
-    msg.set_body(strBody.str(), "application/x-www-form-urlencoded; charset=utf-8");
+    uri_builder body_builder;
+    body_builder.append_query(U("message"), U(strText));
+    msg.set_body(body_builder.query(), "application/x-www-form-urlencoded; charset=utf-8");
 
     http_response response = LineClient.request(msg).get();
 
@@ -298,7 +314,15 @@ void coutHttpResponse(http_response response, std::string strPrefix)
 
     if(response.status_code() != 200)
     {
-        outputString << U(": ") << response.extract_json().get().serialize();
+        outputString << ": " << response.extract_json().get().serialize();
+    }
+    else if(response.headers().size() > 0)
+    {
+        outputString << ":" << std::endl;
+        for(auto header : response.headers())
+        {
+            outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
+        }
     }
 
     std::cout << outputString.str() << std::endl;
