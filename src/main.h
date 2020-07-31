@@ -35,6 +35,8 @@ http_client LineClient = http_client(LineNotifyApiUrlBase);
 http_response sendToTelegram(std::string strText);
 http_response sendToLine(std::string strText);
 
+void reportServiceRestarted();
+
 enum ArgIndex : uint
 {
     Command = 0,
@@ -67,7 +69,7 @@ uint getMonth(uint year, uint day);
 uint getDate(uint year, uint day);
 
 void coutArgs(int argc, char *argv[]);
-void coutHttpResponse(http_response response, std::string strPrefix = "Response");
+void coutHttpResponse(http_response response, std::string strPrefix = "Response", json::value jsonBody = NULL);
 
 http_response sendAudio(http_client client, bool isNewTestament, uint year, uint day, bool disable_notification);
 http_response sendPoll(http_client client, uint day, bool disable_notification);

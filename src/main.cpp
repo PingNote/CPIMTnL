@@ -66,12 +66,17 @@ int main(int argc, char *argv[])
     }
     */
 
+    /// Standby send to Line
     http_client_config LineClientConfig;
     LineClientConfig.set_validate_certificates(false);
     LineClient = http_client(LineNotifyApiUrlBase, LineClientConfig);
 
+
+    /// Standby Telegram Webhook
     http_listener listenTelegram = openListener(listen_to_telegram_address, handleTelegram);
 
+
+    /// Standby send to Telegram
     std::ostringstream TelegramBotApiUrlBaseStream;
     TelegramBotApiUrlBaseStream << TelegramBotApiUrlBase << TelegramBotApiToken;
 
@@ -79,7 +84,12 @@ int main(int argc, char *argv[])
     TelegramClientConfig.set_validate_certificates(false);
     TelegramClient = http_client(TelegramBotApiUrlBaseStream.str(), TelegramClientConfig);
 
+
+    /// Standby Line Webhook
     http_listener listenLine     = openListener(listen_to_line_address    , handleLine);
+
+
+    reportServiceRestarted();
 
     while(true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
@@ -90,6 +100,31 @@ int main(int argc, char *argv[])
     listenLine.close().wait();
 
     return ExitCode::Normal;
+}
+
+void reportServiceRestarted()
+{
+    http_client_config MyIpClientConfig;
+    MyIpClientConfig.set_validate_certificates(false);
+    http_client MyIpClient("https://api.myip.com", MyIpClientConfig);
+    http_response response = MyIpClient.request(methods::GET).get();
+
+    if(response.status_code() == status_codes::OK)
+    {
+        // Force set Content-Type to application/json
+        response.headers()["Content-Type"] = "application/json";
+
+        std::string strPrefix = "reportServiceRestarted";
+
+        json::value jsonBody = response.extract_json().get();
+        coutHttpResponse(response, strPrefix, jsonBody);
+
+        std::ostringstream outputString;
+        outputString << strPrefix << ": " << jsonBody.serialize();
+
+        response = sendToTelegram(outputString.str());
+        coutHttpResponse(response, "sendToTelegram");
+    }
 }
 
 http_listener openListener(std::string address, const std::function<void(http_request)>& handler)
@@ -307,14 +342,18 @@ void coutArgs(int argc, char *argv[])
     std::cout << std::endl;
 }
 
-void coutHttpResponse(http_response response, std::string strPrefix)
+void coutHttpResponse(http_response response, std::string strPrefix, json::value jsonBody)
 {
     std::ostringstream outputString;
     outputString << strPrefix << U("(") << response.status_code() << U(")");
 
-    if(response.status_code() != 200)
+    if(response.status_code() != http::status_codes::OK)
     {
-        outputString << ": " << response.extract_json().get().serialize();
+        if(jsonBody == NULL)
+        {
+            jsonBody = response.extract_json().get();
+        }
+        outputString << ": " << jsonBody.serialize();
     }
     else if(response.headers().size() > 0)
     {
