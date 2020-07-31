@@ -104,27 +104,33 @@ int main(int argc, char *argv[])
 
 void reportServiceRestarted()
 {
-    http_client_config MyIpClientConfig;
-    MyIpClientConfig.set_validate_certificates(false);
-    http_client MyIpClient("https://api.myip.com", MyIpClientConfig);
-    http_response response = MyIpClient.request(methods::GET).get();
+    std::ostringstream outputString;
+    outputString << "[ServiceRestarted]\n\n";
 
-    if(response.status_code() == status_codes::OK)
+    json::value jsonBody;
+
+    jsonBody = httpGetJson("http://v4.ipv6-test.com/api/myip.php?json", false, true, "reportServiceRestarted");
+    if(jsonBody != NULL)
     {
-        // Force set Content-Type to application/json
-        response.headers()["Content-Type"] = "application/json";
-
-        std::string strPrefix = "reportServiceRestarted";
-
-        json::value jsonBody = response.extract_json().get();
-        coutHttpResponse(response, strPrefix, jsonBody);
-
-        std::ostringstream outputString;
-        outputString << strPrefix << ": " << jsonBody.serialize();
-
-        response = sendToTelegram(outputString.str());
-        coutHttpResponse(response, "sendToTelegram");
+        outputString << jsonBody.serialize() << "\n\n";
     }
+
+    jsonBody = httpGetJson("http://v6.ipv6-test.com/api/myip.php?json", false, true, "reportServiceRestarted");
+    if(jsonBody != NULL)
+    {
+        outputString << jsonBody.serialize() << "\n\n";
+    }
+
+    jsonBody = httpGetJson("https://api.myip.com", false, true, "reportServiceRestarted");
+    if(jsonBody != NULL)
+    {
+        outputString << jsonBody.serialize();
+    }
+
+    http_response response = sendToTelegram(outputString.str());
+    coutHttpResponse(response, "sendToTelegram",
+                     false, true,
+                     true, false);
 }
 
 http_listener openListener(std::string address, const std::function<void(http_request)>& handler)
@@ -149,21 +155,16 @@ void handleTelegram(http_request request)
     outputString << U("Receive (") << request.method() << U("): ");
     outputString << request.request_uri().to_string() << std::endl;
     outputString << U("Body: ") << strBody << std::endl;
-
-    if(request.headers().size() > 0)
-    {
-        for(auto header : request.headers())
-        {
-            outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
-        }
-    }
-
     std::cout << outputString.str() << std::endl;
+
+    coutHeaders(request.headers());
 
     request.reply(status_codes::OK, "");
 
     http_response response = sendToLine(strBody);
-    coutHttpResponse(response, "sendToLine");
+    coutHttpResponse(response, "sendToLine",
+                     false, true,
+                     true, false);
 }
 
 void handleLine(http_request request)
@@ -176,20 +177,16 @@ void handleLine(http_request request)
     outputString << request.request_uri().to_string() << std::endl;
     outputString << U("Body: ") << strBody << std::endl;
 
-    if(request.headers().size() > 0)
-    {
-        for(auto header : request.headers())
-        {
-            outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
-        }
-    }
+    coutHeaders(request.headers());
 
     std::cout << outputString.str() << std::endl;
 
     request.reply(status_codes::OK, "");
 
     http_response response = sendToTelegram(strBody);
-    coutHttpResponse(response, "sendToTelegram");
+    coutHttpResponse(response, "sendToTelegram",
+                     false, true,
+                     true, false);
 }
 
 http_response sendToTelegram(std::string strText)
@@ -226,27 +223,24 @@ http_response sendToLine(std::string strText)
     return response;
 }
 
-void modeYearDay(http_client client, uint year, uint day, bool disable_notification)
+json::value httpGetJson(std::string strUrl, bool validate_certs, bool ignore_content_type, std::string strPrefix)
 {
-    std::cout << U("[modeYearDay] ")
-        << U("year = ") << year
-        << U(", day = ") << day
-        << U(", disable_notification = ") << disable_notification
-        << std::endl;
+    json::value jsonBody;
 
-    http_response response;
+    http_client_config config;
+    config.set_validate_certificates(validate_certs);
 
-    response = sendAudio(client, true, year, day, disable_notification);
-    coutHttpResponse(response);
-    std::cout << std::endl;
+    http_client httpGetClient(strUrl, config);
+    http_response response = httpGetClient.request(methods::GET).get();
+    http::status_code status_code = response.status_code();
+    if(status_code == http::status_codes::OK)
+    {
+        jsonBody = response.extract_json(ignore_content_type).get();
+    }
 
-    response = sendAudio(client, false, year, day, disable_notification);
-    coutHttpResponse(response);
-    std::cout << std::endl;
+    coutHttpResponse(status_code, jsonBody, response.headers(), strPrefix);
 
-    response = sendPoll(client, day, disable_notification);
-    coutHttpResponse(response);
-    std::cout << std::endl;
+    return jsonBody;
 }
 
 http_response sendAudio(http_client client, bool isNewTestament, uint year, uint day, bool disable_notification)
@@ -274,15 +268,6 @@ http_response sendAudio(http_client client, bool isNewTestament, uint year, uint
 
     // caption
     std::ostringstream captionStream;
-    captionStream
-            << year << U(".")
-            << std::setw(2) << std::setfill(U('0')) << getMonth(year, day) << U(".")
-            << std::setw(2) << std::setfill(U('0')) << getDate(year, day) << U("\n")
-            << U("@bible365_today\n")
-            << U("\n")
-            << (isNewTestament ? U("新約") : U("舊約"))
-            << U("第 ") << day << U(" 天\n")
-            << webPageStream.str();
 
     json::value requestBody = json::value::object();
     requestBody[U("chat_id")] = json::value::string(chat_id);
@@ -342,112 +327,52 @@ void coutArgs(int argc, char *argv[])
     std::cout << std::endl;
 }
 
-void coutHttpResponse(http_response response, std::string strPrefix, json::value jsonBody)
+void coutHeaders(http_headers headers)
 {
+    if(headers.size() <= 0)
+    {
+        return;
+    }
+
     std::ostringstream outputString;
-    outputString << strPrefix << U("(") << response.status_code() << U(")");
-
-    if(response.status_code() != http::status_codes::OK)
+    for(auto header : headers)
     {
-        if(jsonBody == NULL)
-        {
-            jsonBody = response.extract_json().get();
-        }
-        outputString << ": " << jsonBody.serialize();
+        outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
     }
-    else if(response.headers().size() > 0)
-    {
-        outputString << ":" << std::endl;
-        for(auto header : response.headers())
-        {
-            outputString << "\theaders[\"" << header.first << "\"]=\"" << header.second << "\"" << std::endl;
-        }
-    }
-
     std::cout << outputString.str() << std::endl;
 }
 
-bool isLeapYear(uint year)
+void coutHttpResponse(http_response response, std::string strPrefix,
+                      bool isShowBodyWhenOk, bool isShowHeadersWhenOk,
+                      bool isShowBodyWhenNonOk, bool isShowHeadersWhenNonOk)
 {
-    if (year % 400 == 0) return true;
-    if (year % 100 == 0) return false;
-    if (year % 4 == 0) return true;
-    return false;
+    coutHttpResponse(response.status_code(),
+                     response.extract_json(true).get(),
+                     response.headers(),
+                     strPrefix,
+                     isShowBodyWhenOk, isShowHeadersWhenOk,
+                     isShowBodyWhenNonOk, isShowHeadersWhenNonOk);
 }
 
-uint getMonth(uint year, uint day)
+void coutHttpResponse(http::status_code status_code, json::value jsonBody, http_headers headers,
+                      std::string strPrefix,
+                      bool isShowBodyWhenOk, bool isShowHeadersWhenOk,
+                      bool isShowBodyWhenNonOk, bool isShowHeadersWhenNonOk)
 {
-    if (day <= 31) return 1;
-    day -= 31;
+    std::ostringstream outputString;
+    outputString << strPrefix << U("(") << status_code << U(")");
 
-    uint febDay = isLeapYear(year) ? 29 : 28;
-    if (day <= febDay) return 2;
-    day -= febDay;
+    if(jsonBody != NULL &&
+       ((isShowBodyWhenOk    && status_code == http::status_codes::OK) ||
+        (isShowBodyWhenNonOk && status_code != http::status_codes::OK)   ))
+    {
+        outputString << ": " << jsonBody.serialize();
+    }
+    std::cout << outputString.str() << std::endl;
 
-    if (day <= 31) return 3;
-    day -= 31;
-
-    if (day <= 30) return 4;
-    day -= 30;
-
-    if (day <= 31) return 5;
-    day -= 31;
-
-    if (day <= 30) return 6;
-    day -= 30;
-
-    if (day <= 31) return 7;
-    day -= 31;
-
-    if (day <= 31) return 8;
-    day -= 31;
-
-    if (day <= 30) return 9;
-    day -= 30;
-
-    if (day <= 31) return 10;
-    day -= 31;
-
-    if (day <= 30) return 11;
-
-    return 12;
+    if(((isShowHeadersWhenOk    && status_code == http::status_codes::OK) ||
+        (isShowHeadersWhenNonOk && status_code != http::status_codes::OK)   ))
+    {
+        coutHeaders(headers);
+    }
 }
-
-uint getDate(uint year, uint day)
-{
-    if (day <= 31) return day;
-    day -= 31;
-
-    uint febDay = isLeapYear(year) ? 29 : 28;
-    if (day <= febDay) return day;
-    day -= febDay;
-
-    if (day <= 31) return day;
-    day -= 31;
-
-    if (day <= 30) return day;
-    day -= 30;
-
-    if (day <= 31) return day;
-    day -= 31;
-
-    if (day <= 30) return day;
-    day -= 30;
-
-    if (day <= 31) return day;
-    day -= 31;
-
-    if (day <= 31) return day;
-    day -= 31;
-
-    if (day <= 30) return day;
-    day -= 30;
-
-    if (day <= 31) return day;
-    day -= 31;
-
-    if (day <= 30) return day;
-    day -= 30;
-
-    return day;
-};

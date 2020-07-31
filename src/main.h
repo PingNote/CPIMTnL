@@ -5,6 +5,7 @@
 #include <iostream>
 #include <thread>
 #include <cpprest/details/basic_types.h>
+#include <cpprest/http_headers.h>
 #include <cpprest/http_client.h>
 #include <cpprest/http_listener.h>
 #include <boost/date_time.hpp>
@@ -36,6 +37,20 @@ http_response sendToTelegram(std::string strText);
 http_response sendToLine(std::string strText);
 
 void reportServiceRestarted();
+
+json::value httpGetJson(std::string strUrl, bool validate_certs = false, bool ignore_content_type = true, std::string strPrefix  = "Response");
+
+void coutHeaders(http_headers headers);
+
+void coutHttpResponse(http_response response,
+                      std::string strPrefix = "Response",
+                      bool isShowBodyWhenOk = true, bool isShowHeadersWhenOk  = true,
+                      bool isShowBodyWhenNonOk = true, bool isShowHeadersWhenNonOk  = true);
+
+void coutHttpResponse(http::status_code status_code, json::value jsonBody, http_headers headers,
+                      std::string strPrefix = "Response",
+                      bool isShowBodyWhenOk = true, bool isShowHeadersWhenOk  = true,
+                      bool isShowBodyWhenNonOk = true, bool isShowHeadersWhenNonOk  = true);
 
 enum ArgIndex : uint
 {
@@ -69,7 +84,6 @@ uint getMonth(uint year, uint day);
 uint getDate(uint year, uint day);
 
 void coutArgs(int argc, char *argv[]);
-void coutHttpResponse(http_response response, std::string strPrefix = "Response", json::value jsonBody = NULL);
 
 http_response sendAudio(http_client client, bool isNewTestament, uint year, uint day, bool disable_notification);
 http_response sendPoll(http_client client, uint day, bool disable_notification);
